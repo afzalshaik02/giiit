@@ -81,8 +81,8 @@
         <h1>Cloud Notes (Offline)</h1>
         <div class="top-actions">
             <button id="newBtn">New</button>
-            <button id="exportBtn" class="ghost">Export</button>
-            <button id="importBtn" class="ghost">Import</button>
+            <button id="exportBtn" class="ghost">Export TXT</button>
+            <button id="importBtn" class="ghost">Import JSON</button>
             <input type="file" id="fileInput" style="display:none" accept=".json">
         </div>
     </header>
@@ -113,11 +113,6 @@ const STORAGE_KEY = "cloud_notes_v1";
 let notes = [];
 let activeId = null;
 
-const noteList = document.getElementById("noteList");
-const titleInput = document.getElementById("title");
-const contentInput = document.getElementById("content");
-const searchInput = document.getElementById("search");
-
 function uid(){
     return Date.now().toString(36) + Math.random().toString(36).slice(2,8);
 }
@@ -132,25 +127,27 @@ function saveNotes(){
 }
 
 function renderList(filter=""){
-    noteList.innerHTML = "";
-    const q = filter.toLowerCase().trim();
+    const list = document.getElementById("noteList");
+    list.innerHTML = "";
 
-    const list = notes
+    const q = filter.toLowerCase().trim();
+    const show = notes
         .slice()
-        .sort((a,b)=>b.updated-a.updated)
+        .sort((a,b)=>b.updated - a.updated)
         .filter(n => !q || (n.title+" "+n.content).toLowerCase().includes(q));
 
-    if(list.length === 0){
-        noteList.innerHTML = "<div>No notes</div>";
+    if(show.length === 0){
+        list.innerHTML = "<div>No notes</div>";
         return;
     }
 
-    list.forEach(n=>{
+    show.forEach(n=>{
         const d = document.createElement("div");
         d.className = "note-item" + (n.id===activeId ? " active":"");
-        d.innerHTML = `<strong>${n.title || "(Untitled)"}</strong><br><small>${new Date(n.updated).toLocaleString()}</small>`;
+        d.innerHTML = `<strong>${n.title || "(Untitled)"}</strong><br>
+                       <small>${new Date(n.updated).toLocaleString()}</small>`;
         d.onclick = ()=> openNote(n.id);
-        noteList.appendChild(d);
+        list.appendChild(d);
     });
 }
 
@@ -158,9 +155,9 @@ function openNote(id){
     activeId = id;
     const n = notes.find(x=>x.id===id);
     if(!n) return;
-    titleInput.value = n.title;
-    contentInput.value = n.content;
-    renderList(searchInput.value);
+    document.getElementById("title").value = n.title;
+    document.getElementById("content").value = n.content;
+    renderList(document.getElementById("search").value);
 }
 
 function newNote(){
@@ -175,32 +172,51 @@ function newNote(){
 function deleteNote(){
     if(!activeId) return;
     notes = notes.filter(n=>n.id !== activeId);
-    activeId = null;
     saveNotes();
+    activeId = null;
+    document.getElementById("title").value = "";
+    document.getElementById("content").value = "";
     renderList();
-    titleInput.value = "";
-    contentInput.value = "";
 }
 
 function clearAllNotes(){
     if(!confirm("Delete all notes?")) return;
     notes = [];
-    activeId = null;
     saveNotes();
+    activeId = null;
+    document.getElementById("title").value = "";
+    document.getElementById("content").value = "";
     renderList();
-    titleInput.value = "";
-    contentInput.value = "";
 }
 
+// ⭐ EXPORT AS TEXT FILE
 function exportNotes(){
-    const blob = new Blob([JSON.stringify(notes,null,2)], {type:"application/json"});
+    if(notes.length === 0){
+        alert("No notes to export!");
+        return;
+    }
+
+    let text = "";
+
+    notes.forEach((n, i)=>{
+        text += `Note ${i+1}\n`;
+        text += `Title: ${n.title}\n`;
+        text += `Content:\n${n.content}\n`;
+        text += "--------------------------------------------\n\n";
+    });
+
+    const blob = new Blob([text], {type:"text/plain"});
     const url = URL.createObjectURL(blob);
+
     const a = document.createElement("a");
     a.href = url;
-    a.download = "notes-export.json";
+    a.download = "notes.txt";
     a.click();
+
+    URL.revokeObjectURL(url);
 }
 
+// ⭐ IMPORT JSON + AUTO-OPEN FIRST IMPORTED
 function importNotesFile(file){
     const reader = new FileReader();
     reader.onload = () => {
@@ -225,7 +241,6 @@ function importNotesFile(file){
             renderList();
 
             if(firstNewId){
-                activeId = firstNewId;
                 openNote(firstNewId);
             }
 
@@ -242,35 +257,37 @@ let timer = null;
 function autosave(){
     if(!activeId) return;
     if(timer) clearTimeout(timer);
+
     timer = setTimeout(()=>{
         const n = notes.find(x=>x.id===activeId);
-        n.title = titleInput.value;
-        n.content = contentInput.value;
+        n.title = document.getElementById("title").value;
+        n.content = document.getElementById("content").value;
         n.updated = Date.now();
         saveNotes();
-        renderList(searchInput.value);
+        renderList(document.getElementById("search").value);
     }, 600);
 }
 
-// Events
+// EVENTS
 document.getElementById("newBtn").onclick = newNote;
-document.getElementById("saveBtn").onclick = autosave;
 document.getElementById("deleteBtn").onclick = deleteNote;
 document.getElementById("clearAll").onclick = clearAllNotes;
 document.getElementById("exportBtn").onclick = exportNotes;
 document.getElementById("importBtn").onclick = ()=> document.getElementById("fileInput").click();
 document.getElementById("fileInput").onchange = e => importNotesFile(e.target.files[0]);
 
-titleInput.oninput = autosave;
-contentInput.oninput = autosave;
-searchInput.oninput = ()=> renderList(searchInput.value);
+document.getElementById("title").oninput = autosave;
+document.getElementById("content").oninput = autosave;
+document.getElementById("search").oninput = ()=> renderList(document.getElementById("search").value);
 
-// Init
+// INIT
 loadNotes();
 renderList();
-if(notes.length){ activeId = notes[0].id; openNote(activeId); }
+if(notes.length){
+    openNote(notes[0].id);
+}
 
-// Service Worker
+// SERVICE WORKER
 if("serviceWorker" in navigator){
     navigator.serviceWorker.register("sw.js");
 }
