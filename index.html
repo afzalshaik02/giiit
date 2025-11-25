@@ -1,296 +1,280 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Cloud Notes — Offline Notes App</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <style>
-    :root{
-      --accent:#1976d2;
-      --bg:#f4f7fb;
-      --card:#ffffff;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:Inter, "Segoe UI", Roboto, Arial, sans-serif;
-      background:var(--bg);
-      color:#222;
-      display:flex;
-      min-height:100vh;
-      align-items:flex-start;
-      justify-content:center;
-      padding:28px;
-    }
-    .app {
-      width:100%;
-      max-width:980px;
-      background:var(--card);
-      border-radius:12px;
-      box-shadow:0 6px 20px rgba(16,24,40,0.12);
-      padding:18px;
-    }
-    header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-    header h1{font-size:20px;margin:0}
-    .top-actions{margin-left:auto;display:flex;gap:8px}
-    button{background:var(--accent);color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
-    button.ghost{background:transparent;color:var(--accent);border:1px solid rgba(25,118,210,0.12)}
-    main{display:grid;grid-template-columns:320px 1fr;gap:12px}
-    .sidebar{border-right:1px solid #eee;padding-right:12px}
-    .note-list{max-height:64vh;overflow:auto}
-    .note-item{padding:10px;border-radius:8px;margin-bottom:8px;cursor:pointer;border:1px solid transparent}
-    .note-item.active{background:#eaf4ff;border-color:#cfe9ff}
-    .note-item .meta{font-size:12px;color:#555}
-    .editor{
-      display:flex;flex-direction:column;height:70vh;
-    }
-    input.search{width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;margin-bottom:12px}
-    #title{padding:10px;border-radius:8px;border:1px solid #ddd;margin-bottom:10px}
-    #content{flex:1;padding:12px;border-radius:8px;border:1px solid #ddd;resize:none;min-height:300px}
-    .editor-actions{display:flex;gap:8px;margin-top:8px;align-items:center}
-    .muted{color:#666;font-size:13px}
-    footer{margin-top:12px;font-size:13px;color:#444;display:flex;justify-content:space-between;align-items:center}
-    .small{font-size:12px;color:#666}
-    .u-link{color:var(--accent);text-decoration:underline;cursor:pointer;background:none;border:0}
-    /* responsive */
-    @media (max-width:800px){
-      main{grid-template-columns:1fr;gap:8px}
-      .sidebar{order:2;border-right:0;padding-right:0}
-      .editor{order:1}
-    }
-  </style>
+    <meta charset="utf-8" />
+    <title>Cloud Notes — Offline Notes App</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+        :root {
+            --accent:#1976d2;
+            --bg:#f4f7fb;
+            --card:#ffffff;
+        }
+        * { box-sizing:border-box; }
+        body {
+            margin:0;
+            font-family:Arial, sans-serif;
+            background:var(--bg);
+            display:flex;
+            justify-content:center;
+            padding:20px;
+        }
+        .app {
+            width:100%;
+            max-width:900px;
+            background:var(--card);
+            padding:20px;
+            border-radius:10px;
+            box-shadow:0 0 15px rgba(0,0,0,0.1);
+        }
+        header { display:flex; align-items:center; margin-bottom:15px; }
+        header h1 { margin:0; font-size:22px; }
+        .top-actions { margin-left:auto; display:flex; gap:10px; }
+        button {
+            padding:8px 14px;
+            border:0;
+            border-radius:8px;
+            cursor:pointer;
+            background:var(--accent);
+            color:#fff;
+        }
+        button.ghost {
+            background:transparent;
+            border:1px solid #bbb;
+            color:var(--accent);
+        }
+        main {
+            display:grid;
+            grid-template-columns:280px 1fr;
+            gap:12px;
+        }
+        input, textarea {
+            width:100%;
+            padding:10px;
+            border:1px solid #ccc;
+            border-radius:8px;
+            margin-bottom:8px;
+        }
+        textarea { height:320px; resize:none; }
+        .note-list { max-height:65vh; overflow:auto; }
+        .note-item {
+            padding:10px;
+            border-radius:8px;
+            margin-bottom:8px;
+            cursor:pointer;
+            border:1px solid transparent;
+        }
+        .note-item.active {
+            background:#e9f2ff;
+            border-color:#c9e0ff;
+        }
+        footer { font-size:14px; margin-top:10px; display:flex; justify-content:space-between; }
+        @media(max-width:800px){
+            main { grid-template-columns:1fr; }
+        }
+    </style>
 </head>
 <body>
-  <div class="app" role="application" aria-label="Offline Notes App">
-    <header>
-      <img src="" alt="" style="width:36px;height:36px;border-radius:6px;background:linear-gradient(135deg,#1976d2,#58a6ff)">
-      <h1>Cloud Notes (Saved in browser)</h1>
 
-      <div class="top-actions">
-        <button id="newBtn">New Note</button>
-        <button id="exportBtn" class="ghost">Export</button>
-        <button id="importBtn" class="ghost">Import</button>
-        <input id="fileInput" type="file" accept=".json" style="display:none">
-      </div>
+<div class="app">
+    <header>
+        <h1>Cloud Notes (Offline)</h1>
+        <div class="top-actions">
+            <button id="newBtn">New</button>
+            <button id="exportBtn" class="ghost">Export</button>
+            <button id="importBtn" class="ghost">Import</button>
+            <input type="file" id="fileInput" style="display:none" accept=".json">
+        </div>
     </header>
 
     <main>
-      <aside class="sidebar" aria-label="Notes list">
-        <input id="search" class="search" placeholder="Search notes... (title or content)">
-        <div class="note-list" id="noteList" role="list"></div>
-      </aside>
+        <aside>
+            <input id="search" placeholder="Search notes...">
+            <div id="noteList" class="note-list"></div>
+        </aside>
 
-      <section class="editor" aria-label="Note editor">
-        <input id="title" placeholder="Note title">
-        <textarea id="content" placeholder="Write your note here..." spellcheck="true"></textarea>
+        <section>
+            <input id="title" placeholder="Note title">
+            <textarea id="content" placeholder="Write your note..."></textarea>
 
-        <div class="editor-actions">
-          <button id="saveBtn">Save</button>
-          <button id="deleteBtn" class="ghost">Delete</button>
-          <div class="muted" id="status">Autosave: <span id="autosaveTime">Never</span></div>
-        </div>
+            <button id="saveBtn">Save</button>
+            <button id="deleteBtn" class="ghost">Delete</button>
 
-        <footer>
-          <div class="small">Works offline — all notes stored in browser (localStorage)</div>
-          <div>
-            <button id="clearAll" class="ghost">Clear All</button>
-            <a id="uploadedFile" class="u-link" target="_blank" rel="noopener">Uploaded file (preview)</a>
-          </div>
-        </footer>
-      </section>
+            <footer>
+                <span>Saved automatically in browser</span>
+                <button id="clearAll" class="ghost">Clear All</button>
+            </footer>
+        </section>
     </main>
-  </div>
+</div>
 
 <script>
-/* ---------------------------
-  Notes App (localStorage + autosave + search + export/import + offline)
-   - Data stored under key: "cloud_notes_v1"
-   - Each note: {id, title, content, updated}
-----------------------------*/
 const STORAGE_KEY = "cloud_notes_v1";
 let notes = [];
 let activeId = null;
+
 const noteList = document.getElementById("noteList");
 const titleInput = document.getElementById("title");
 const contentInput = document.getElementById("content");
-const statusSpan = document.getElementById("autosaveTime");
 const searchInput = document.getElementById("search");
-const uploadedFileLink = document.getElementById("uploadedFile");
 
-// Developer-provided uploaded file path (will get transformed to a URL in the environment)
-uploadedFileLink.href = "/mnt/data/b465acf2-3b5c-4365-85d1-a8b3fd4dde26.png";
-uploadedFileLink.textContent = "Uploaded file (preview)";
+function uid(){
+    return Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+}
 
-// load
 function loadNotes(){
-  try{
     const raw = localStorage.getItem(STORAGE_KEY);
     notes = raw ? JSON.parse(raw) : [];
-  }catch(e){
-    console.error("Failed to parse notes:", e);
-    notes = [];
-  }
 }
+
 function saveNotes(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
-  statusSpan.textContent = new Date().toLocaleTimeString();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
 }
-function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
-// UI
 function renderList(filter=""){
-  noteList.innerHTML = "";
-  const q = filter.trim().toLowerCase();
-  const shown = notes
-    .slice()
-    .sort((a,b)=>b.updated - a.updated)
-    .filter(n => !q || (n.title+ " " + n.content).toLowerCase().includes(q));
+    noteList.innerHTML = "";
+    const q = filter.toLowerCase().trim();
 
-  if(shown.length===0){
-    noteList.innerHTML = "<div class='muted' style='padding:8px'>No notes yet — click New Note</div>";
-    return;
-  }
-  shown.forEach(n=>{
-    const el = document.createElement("div");
-    el.className = "note-item" + (n.id===activeId ? " active": "");
-    el.tabIndex = 0;
-    el.innerHTML = `<div style="font-weight:600">${escapeHtml(n.title || "(untitled)")}</div>
-                    <div class="meta">${new Date(n.updated).toLocaleString()}</div>`;
-    el.addEventListener("click", ()=> openNote(n.id));
-    el.addEventListener("keydown", (e)=> { if(e.key==="Enter") openNote(n.id); });
-    noteList.appendChild(el);
-  });
+    const list = notes
+        .slice()
+        .sort((a,b)=>b.updated-a.updated)
+        .filter(n => !q || (n.title+" "+n.content).toLowerCase().includes(q));
+
+    if(list.length === 0){
+        noteList.innerHTML = "<div>No notes</div>";
+        return;
+    }
+
+    list.forEach(n=>{
+        const d = document.createElement("div");
+        d.className = "note-item" + (n.id===activeId ? " active":"");
+        d.innerHTML = `<strong>${n.title || "(Untitled)"}</strong><br><small>${new Date(n.updated).toLocaleString()}</small>`;
+        d.onclick = ()=> openNote(n.id);
+        noteList.appendChild(d);
+    });
 }
 
 function openNote(id){
-  activeId = id;
-  const n = notes.find(x=>x.id===id);
-  titleInput.value = n.title;
-  contentInput.value = n.content;
-  renderList(searchInput.value);
+    activeId = id;
+    const n = notes.find(x=>x.id===id);
+    if(!n) return;
+    titleInput.value = n.title;
+    contentInput.value = n.content;
+    renderList(searchInput.value);
 }
 
 function newNote(){
-  const n = { id: uid(), title:"", content:"", updated: Date.now() };
-  notes.push(n);
-  saveNotes();
-  activeId = n.id;
-  renderList();
-  openNote(n.id);
-}
-
-function deleteActive(){
-  if(!activeId) return;
-  notes = notes.filter(n=>n.id!==activeId);
-  activeId = null;
-  saveNotes();
-  renderList();
-  titleInput.value = "";
-  contentInput.value = "";
-}
-
-function clearAll(){
-  if(!confirm("Clear ALL notes? This cannot be undone.")) return;
-  notes = [];
-  activeId = null;
-  saveNotes();
-  renderList();
-  titleInput.value = "";
-  contentInput.value = "";
-}
-
-/* autosave: on input, update note object but debounce rapid saves */
-let autosaveTimer = null;
-function scheduleAutosave(){
-  if(!activeId) return;
-  if(autosaveTimer) clearTimeout(autosaveTimer);
-  autosaveTimer = setTimeout(()=> {
-    const n = notes.find(x=>x.id===activeId);
-    if(!n) return;
-    n.title = titleInput.value;
-    n.content = contentInput.value;
-    n.updated = Date.now();
+    const n = {id:uid(), title:"", content:"", updated:Date.now()};
+    notes.push(n);
     saveNotes();
-    renderList(searchInput.value);
-  }, 700); // saves 700ms after last keystroke
+    activeId = n.id;
+    renderList();
+    openNote(n.id);
 }
 
-/* helpers */
-function escapeHtml(s){ return String(s||"").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function deleteNote(){
+    if(!activeId) return;
+    notes = notes.filter(n=>n.id !== activeId);
+    activeId = null;
+    saveNotes();
+    renderList();
+    titleInput.value = "";
+    contentInput.value = "";
+}
 
-/* export/import */
+function clearAllNotes(){
+    if(!confirm("Delete all notes?")) return;
+    notes = [];
+    activeId = null;
+    saveNotes();
+    renderList();
+    titleInput.value = "";
+    contentInput.value = "";
+}
+
 function exportNotes(){
-  const blob = new Blob([JSON.stringify(notes, null, 2)], {type:"application/json"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `notes-export-${new Date().toISOString().slice(0,10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+    const blob = new Blob([JSON.stringify(notes,null,2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "notes-export.json";
+    a.click();
 }
+
 function importNotesFile(file){
-  const reader = new FileReader();
-  reader.onload = () => {
-    try{
-      const imported = JSON.parse(reader.result);
-      if(!Array.isArray(imported)) throw new Error("Invalid file");
-      // merge: keep existing, add imported with new ids to avoid collisions
-      for(const n of imported){
-        const newN = {
-          id: uid(),
-          title: n.title || "",
-          content: n.content || "",
-          updated: n.updated ? Number(n.updated) : Date.now()
-        };
-        notes.push(newN);
-      }
-      saveNotes();
-      renderList();
-      alert("Import completed.");
-    }catch(err){
-      alert("Import failed: " + err.message);
-    }
-  };
-  reader.readAsText(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+        try {
+            const imported = JSON.parse(reader.result);
+            if(!Array.isArray(imported)) throw new Error("Invalid file");
+
+            let firstNewId = null;
+
+            imported.forEach(n=>{
+                const newN = {
+                    id: uid(),
+                    title: n.title || "",
+                    content: n.content || "",
+                    updated: n.updated ? Number(n.updated) : Date.now()
+                };
+                notes.push(newN);
+                if(!firstNewId) firstNewId = newN.id;
+            });
+
+            saveNotes();
+            renderList();
+
+            if(firstNewId){
+                activeId = firstNewId;
+                openNote(firstNewId);
+            }
+
+            alert("Import successful!");
+        } catch(e){
+            alert("Import failed: " + e.message);
+        }
+    };
+    reader.readAsText(file);
 }
 
-/* events */
-document.getElementById("newBtn").addEventListener("click", newNote);
-document.getElementById("saveBtn").addEventListener("click", ()=> {
-  if(!activeId) return newNote();
-  scheduleAutosave();
-  // force immediate save
-  const n = notes.find(x=>x.id===activeId);
-  n.title = titleInput.value;
-  n.content = contentInput.value;
-  n.updated = Date.now();
-  saveNotes();
-  renderList(searchInput.value);
-});
-document.getElementById("deleteBtn").addEventListener("click", deleteActive);
-document.getElementById("clearAll").addEventListener("click", clearAll);
-document.getElementById("exportBtn").addEventListener("click", exportNotes);
-document.getElementById("importBtn").addEventListener("click", ()=> document.getElementById("fileInput").click());
-document.getElementById("fileInput").addEventListener("change", (e)=>{
-  if(e.target.files.length) importNotesFile(e.target.files[0]);
-});
-titleInput.addEventListener("input", scheduleAutosave);
-contentInput.addEventListener("input", scheduleAutosave);
-searchInput.addEventListener("input", ()=> renderList(searchInput.value));
+// AUTOSAVE
+let timer = null;
+function autosave(){
+    if(!activeId) return;
+    if(timer) clearTimeout(timer);
+    timer = setTimeout(()=>{
+        const n = notes.find(x=>x.id===activeId);
+        n.title = titleInput.value;
+        n.content = contentInput.value;
+        n.updated = Date.now();
+        saveNotes();
+        renderList(searchInput.value);
+    }, 600);
+}
 
-/* init */
+// Events
+document.getElementById("newBtn").onclick = newNote;
+document.getElementById("saveBtn").onclick = autosave;
+document.getElementById("deleteBtn").onclick = deleteNote;
+document.getElementById("clearAll").onclick = clearAllNotes;
+document.getElementById("exportBtn").onclick = exportNotes;
+document.getElementById("importBtn").onclick = ()=> document.getElementById("fileInput").click();
+document.getElementById("fileInput").onchange = e => importNotesFile(e.target.files[0]);
+
+titleInput.oninput = autosave;
+contentInput.oninput = autosave;
+searchInput.oninput = ()=> renderList(searchInput.value);
+
+// Init
 loadNotes();
 renderList();
-if(notes.length>0){ activeId = notes[0].id; openNote(activeId); }
+if(notes.length){ activeId = notes[0].id; openNote(activeId); }
 
-/* register service worker for offline caching */
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').then(()=> {
-    console.log("Service Worker registered");
-  }).catch(err => console.warn("SW register failed", err));
+// Service Worker
+if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("sw.js");
 }
 </script>
+
 </body>
 </html>
