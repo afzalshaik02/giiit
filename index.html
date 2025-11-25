@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Chatbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f7f7f7;
+            margin: 0;
+            padding: 0;
+        }
+
+        #chat-container {
+            width: 500px;
+            margin: 40px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+
+        #messages {
+            height: 350px;
+            overflow-y: scroll;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+
+        .msg {
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+
+        .user {
+            background: #d1e7ff;
+            text-align: right;
+        }
+
+        .bot {
+            background: #e8e8e8;
+        }
+
+        #input-area {
+            display: flex;
+        }
+
+        #input-area input {
+            flex: 1;
+            padding: 10px;
+        }
+
+        #input-area button {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="chat-container">
+    <h2>AI Chatbot</h2>
+    <div id="messages"></div>
+
+    <div id="input-area">
+        <input type="text" id="userInput" placeholder="Type your message...">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+<script>
+    async function sendMessage() {
+        const input = document.getElementById("userInput");
+        const messages = document.getElementById("messages");
+
+        const userText = input.value.trim();
+        if (!userText) return;
+
+        messages.innerHTML += `<div class="msg user">${userText}</div>`;
+        input.value = "";
+        messages.scrollTop = messages.scrollHeight;
+
+        // CALL AI API
+        const BOT_RESPONSE = await getAIResponse(userText);
+
+        messages.innerHTML += `<div class="msg bot">${BOT_RESPONSE}</div>`;
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    async function getAIResponse(userMessage) {
+
+        const API_URL = "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill";
+
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({"inputs": userMessage})
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            return "Model is loading... please try again in a few seconds.";
+        }
+
+        return data?.generated_text || "Sorry, I couldn't understand that.";
+    }
+</script>
+
+</body>
+</html>
