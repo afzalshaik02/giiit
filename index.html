@@ -1,88 +1,29 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <title>Cloud Notes — TXT Import/Export</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <style>
-        :root { --accent:#1976d2; --bg:#f4f7fb; --card:#ffffff; }
-        * { box-sizing:border-box; }
-        body {
-            margin:0; font-family:Arial, sans-serif;
-            background:var(--bg);
-            display:flex; justify-content:center; padding:20px;
-        }
-        .app {
-            width:100%; max-width:900px;
-            background:var(--card);
-            padding:20px; border-radius:10px;
-            box-shadow:0 0 15px rgba(0,0,0,0.1);
-        }
-        header { display:flex; margin-bottom:15px; }
-        header h1 { margin:0; font-size:22px; }
-        .top-actions { margin-left:auto; display:flex; gap:10px; }
-        button {
-            padding:8px 14px; border:0; border-radius:8px;
-            cursor:pointer; background:var(--accent); color:#fff;
-        }
-        button.ghost {
-            background:transparent; border:1px solid #bbb; color:var(--accent);
-        }
-        main {
-            display:grid; grid-template-columns:280px 1fr; gap:12px;
-        }
-        input, textarea {
-            width:100%; padding:10px; border:1px solid #ccc;
-            border-radius:8px; margin-bottom:8px;
-        }
-        textarea { height:320px; resize:none; }
-        .note-item {
-            padding:10px; border-radius:8px; margin-bottom:8px;
-            cursor:pointer; border:1px solid transparent;
-        }
-        .note-item.active {
-            background:#e9f2ff; border-color:#c9e0ff;
-        }
-        footer { font-size:14px; margin-top:10px; display:flex; justify-content:space-between; }
-        @media(max-width:800px){
-            main { grid-template-columns:1fr; }
-        }
-    </style>
-</head>
-<body>
+const CACHE = "notes-cache-v1";
+const FILES = [
+  "./",
+  "./index.html"
+];
 
-<div class="app">
-    <header>
-        <h1>Cloud Notes (TXT Import/Export)</h1>
-        <div class="top-actions">
-            <button id="newBtn">New</button>
-            <button id="exportBtn" class="ghost">Export TXT</button>
-            <button id="importBtn" class="ghost">Import TXT</button>
-            <input type="file" id="fileInput" style="display:none" accept=".txt">
-        </div>
-    </header>
+self.addEventListener("install", e=>{
+  e.waitUntil(
+    caches.open(CACHE).then(c=>c.addAll(FILES))
+  );
+  self.skipWaiting();
+});
 
-    <main>
-        <aside>
-            <input id="search" placeholder="Search notes...">
-            <div id="noteList"></div>
-        </aside>
+self.addEventListener("activate", e=>{
+  e.waitUntil(
+    caches.keys().then(keys=>Promise.all(
+      keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))
+    ))
+  );
+  self.clients.claim();
+});
 
-        <section>
-            <input id="title" placeholder="Note title">
-            <textarea id="content" placeholder="Write your note..."></textarea>
-
-            <button id="saveBtn">Save</button>
-            <button id="deleteBtn" class="ghost">Delete</button>
-
-            <footer>
-                <span>Saved automatically</span>
-                <button id="clearAll" class="ghost">Clear All</button>
-            </footer>
-        </section>
-    </main>
-</div>
-
-<script src="script.js"></script>
-</body>
-</html>
+self.addEventListener("fetch", e=>{
+  e.respondWith(
+    caches.match(e.request).then(res=>{
+      return res || fetch(e.request);
+    })
+  );
+});
