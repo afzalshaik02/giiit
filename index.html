@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <title>Cloud Notes — TXT Import/Export</title>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+
     <style>
         :root { --accent:#1976d2; --bg:#f4f7fb; --card:#ffffff; }
         * { box-sizing:border-box; }
@@ -26,7 +27,8 @@
             cursor:pointer; background:var(--accent); color:#fff;
         }
         button.ghost {
-            background:transparent; border:1px solid #bbb; color:var(--accent);
+            background:transparent; border:1px solid #bbb;
+            color:var(--accent);
         }
         main {
             display:grid; grid-template-columns:280px 1fr; gap:12px;
@@ -83,168 +85,7 @@
     </main>
 </div>
 
-<script>
-let notes = [];
-let activeId = null;
-const STORAGE_KEY = "notes_txt_app";
-
-function uid(){
-    return Date.now().toString(36);
-}
-
-function loadNotes(){
-    const raw = localStorage.getItem(STORAGE_KEY);
-    notes = raw ? JSON.parse(raw) : [];
-}
-
-function saveNotes(){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
-}
-
-function renderList(q=""){
-    q = q.toLowerCase();
-    const list = document.getElementById("noteList");
-    list.innerHTML = "";
-
-    let filtered = notes.filter(n =>
-        n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q)
-    );
-
-    if(filtered.length === 0){
-        list.innerHTML = "<div>No notes</div>";
-        return;
-    }
-
-    filtered.forEach(n=>{
-        const d = document.createElement("div");
-        d.className = "note-item" + (n.id===activeId?" active":"");
-        d.innerHTML = `<strong>${n.title}</strong><br><small>${new Date(n.updated).toLocaleString()}</small>`;
-        d.onclick = ()=> openNote(n.id);
-        list.appendChild(d);
-    });
-}
-
-function openNote(id){
-    activeId = id;
-    const n = notes.find(x=>x.id===id);
-    if(!n) return;
-    document.getElementById("title").value = n.title;
-    document.getElementById("content").value = n.content;
-    renderList(document.getElementById("search").value);
-}
-
-function newNote(){
-    const n = { id:uid(), title:"", content:"", updated:Date.now() };
-    notes.push(n);
-    saveNotes();
-    openNote(n.id);
-}
-
-function deleteNote(){
-    if(!activeId) return;
-    notes = notes.filter(n=>n.id !== activeId);
-    saveNotes();
-    activeId=null;
-    document.getElementById("title").value="";
-    document.getElementById("content").value="";
-    renderList();
-}
-
-function clearAll(){
-    if(!confirm("Delete all notes?")) return;
-    notes=[];
-    saveNotes();
-    activeId=null;
-    renderList();
-}
-
-// ⭐ EXPORT AS TEXT
-function exportNotes(){
-    if(notes.length === 0){
-        alert("No notes to export!");
-        return;
-    }
-
-    let text = "";
-    notes.forEach((n,i)=>{
-        text += `Note ${i+1}\n`;
-        text += `Title: ${n.title}\n`;
-        text += `Content:\n${n.content}\n`;
-        text += "-------------------------\n\n";
-    });
-
-    const blob = new Blob([text], {type:"text/plain"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "notes.txt";
-    a.click();
-}
-
-// ⭐ IMPORT FROM TEXT
-function importTXT(file){
-    const reader = new FileReader();
-    reader.onload = () => {
-        const text = reader.result;
-        const blocks = text.split("Note ").slice(1);
-
-        blocks.forEach(block=>{
-            const lines = block.split("\n").map(x=>x.trim());
-            const titleLine = lines.find(l=>l.startsWith("Title:"));
-            const title = titleLine ? titleLine.replace("Title:","").trim() : "";
-
-            const idx = lines.indexOf("Content:");
-            let content = "";
-            if(idx !== -1){
-                content = lines.slice(idx+1).join("\n").split("-------------------------")[0].trim();
-            }
-
-            notes.push({
-                id: uid(),
-                title: title,
-                content: content,
-                updated: Date.now()
-            });
-        });
-
-        saveNotes();
-        renderList();
-        alert("TXT import successful!");
-    };
-    reader.readAsText(file);
-}
-
-// AUTOSAVE
-let autosaveTimer=null;
-function autosave(){
-    if(!activeId) return;
-    if(autosaveTimer) clearTimeout(autosaveTimer);
-
-    autosaveTimer = setTimeout(()=>{
-        const n = notes.find(x=>x.id===activeId);
-        n.title = document.getElementById("title").value;
-        n.content = document.getElementById("content").value;
-        n.updated = Date.now();
-        saveNotes();
-        renderList(document.getElementById("search").value);
-    }, 500);
-}
-
-// EVENTS
-document.getElementById("newBtn").onclick = newNote;
-document.getElementById("deleteBtn").onclick = deleteNote;
-document.getElementById("clearAll").onclick = clearAll;
-document.getElementById("exportBtn").onclick = exportNotes;
-document.getElementById("importBtn").onclick = ()=> document.getElementById("fileInput").click();
-document.getElementById("fileInput").onchange = e => importTXT(e.target.files[0]);
-
-document.getElementById("title").oninput = autosave;
-document.getElementById("content").oninput = autosave;
-document.getElementById("search").oninput = ()=> renderList(document.getElementById("search").value);
-
-// INIT
-loadNotes();
-renderList();
-</script>
-
+<!-- attach JS -->
+<script src="script.js"></script>
 </body>
 </html>
