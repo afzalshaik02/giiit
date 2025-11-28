@@ -1,195 +1,257 @@
-const STORAGE_KEY = "notes_txt_app";
-let notes = [];
-let activeId = null;
+// script.js - robust, defensive version with DOMContentLoaded wrapper
 
-const titleInput = document.getElementById("title");
-const contentInput = document.getElementById("content");
-const searchInput = document.getElementById("search");
-const noteList = document.getElementById("noteList");
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    const STORAGE_KEY = "notes_txt_app";
+    let notes = [];
+    let activeId = null;
 
-function uid() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-}
+    // DOM refs
+    const newBtn = document.getElementById("newBtn");
+    const exportBtn = document.getElementById("exportBtn");
+    const importBtn = document.getElementById("importBtn");
+    const fileInput = document.getElementById("fileInput");
+    const saveBtn = document.getElementById("saveBtn");
+    const deleteBtn = document.getElementById("deleteBtn");
+    const clearAllBtn = document.getElementById("clearAll");
 
-// Load from localStorage
-function loadNotes() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    notes = raw ? JSON.parse(raw) : [];
-}
+    const titleInput = document.getElementById("title");
+    const contentInput = document.getElementById("content");
+    const searchInput = document.getElementById("search");
+    const noteList = document.getElementById("noteList");
 
-// Save to localStorage
-function saveNotes() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
-}
-
-// Render notes list
-function renderList(query = "") {
-    const q = query.toLowerCase();
-    noteList.innerHTML = "";
-
-    const filtered = notes.filter(n =>
-        (n.title || "").toLowerCase().includes(q) ||
-        (n.content || "").toLowerCase().includes(q)
-    );
-
-    if (filtered.length === 0) {
-        noteList.innerHTML = "<div>No notes</div>";
-        return;
+    if (!noteList || !titleInput || !contentInput) {
+      console.error("Critical DOM elements missing");
+      return;
     }
 
-    filtered.forEach(n => {
+    function uid() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    function loadNotes() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        notes = raw ? JSON.parse(raw) : [];
+      } catch (err) {
+        console.error("Failed to load notes:", err);
+        notes = [];
+      }
+    }
+
+    function saveNotes() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+      } catch (err) {
+        console.error("Failed to save notes:", err);
+      }
+    }
+
+    function renderList(query = "") {
+      noteList.innerHTML = "";
+      const q = (query || "").toLowerCase();
+
+      const filtered = notes.filter(n =>
+        (n.title || "").toLowerCase().includes(q) ||
+        (n.content || "").toLowerCase().includes(q)
+      );
+
+      if (filtered.length === 0) {
+        noteList.innerHTML = "<div>No notes</div>";
+        return;
+      }
+
+      filtered.forEach(n => {
         const d = document.createElement("div");
         d.className = "note-item" + (n.id === activeId ? " active" : "");
-        d.innerHTML = `
-            <strong>${n.title || "(Untitled)"}</strong><br>
-            <small>${new Date(n.updated).toLocaleString()}</small>
-        `;
-        d.onclick = () => openNote(n.id);
+        const titleText = n.title && n.title.trim() ? n.title : "(Untitled)";
+        d.innerHTML = `<strong>${escapeHtml(titleText)}</strong><br><small>${new Date(n.updated).toLocaleString()}</small>`;
+        d.addEventListener('click', () => openNote(n.id));
         noteList.appendChild(d);
-    });
-}
+      });
+    }
 
-// Open a note
-function openNote(id) {
-    activeId = id;
-    const n = notes.find(x => x.id === id);
-    if (!n) return;
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
+      );
+    }
 
-    titleInput.value = n.title;
-    contentInput.value = n.content;
+    function openNote(id) {
+      const n = notes.find(x => x.id === id);
+      if (!n) return;
+      activeId = id;
+      titleInput.value = n.title || "";
+      contentInput.value = n.content || "";
+      renderList(searchInput.value);
+    }
 
-    renderList(searchInput.value);
-}
+    function createNewNote() {
+      const n = { id: uid(), title: "", content: "", updated: Date.now() };
+      notes.push(n);
+      saveNotes();
+      openNote(n.id);
+      renderList(searchInput.value);
+    }
 
-// Auto-save current note
-function updateActiveNote() {
-    if (!activeId) return;
+    function updateActiveNoteFromInputs() {
+      const t = titleInput.value;
+      const c = contentInput.value;
 
-    const n = notes.find(x => x.id === activeId);
-    if (!n) return;
+      if (!activeId) {
+        // create new if inputs non-empty
+        if (t.trim() === "" && c.trim() === "") return;
+        const n = { id: uid(), title: t, content: c, updated: Date.now() };
+        notes.push(n);
+        activeId = n.id;
+        saveNotes();
+        return;
+      }
+      const n = notes.find(x => x.id === activeId);
+      if (!n) return;
+      n.title = t;
+      n.content = c;
+      n.updated = Date.now();
+      saveNotes();
+    }
 
-    n.title = titleInput.value;
-    n.content = contentInput.value;
-    n.updated = Date.now();
-    saveNotes();
-}
+    function deleteCurrentNote() {
+      if (!activeId) {
+        alert("No active note to delete.");
+        return;
+      }
+      if (!confirm("Delete this note?")) return;
+      notes = notes.filter(n => n.id !== activeId);
+      activeId = null;
+      titleInput.value = "";
+      contentInput.value = "";
+      saveNotes();
+      renderList(searchInput.value);
+    }
 
-// New note
-function newNote() {
-    const n = {
-        id: uid(),
-        title: "",
-        content: "",
-        updated: Date.now()
-    };
-    notes.push(n);
-    saveNotes();
-    openNote(n.id);
-    renderList();
-}
+    function clearAllNotes() {
+      if (!confirm("Delete all notes?")) return;
+      notes = [];
+      activeId = null;
+      titleInput.value = "";
+      contentInput.value = "";
+      saveNotes();
+      renderList();
+    }
 
-// Delete note
-function deleteNote() {
-    if (!activeId) return;
-    notes = notes.filter(n => n.id !== activeId);
-    saveNotes();
+    function exportNotes() {
+      try {
+        // ensure inputs saved
+        updateActiveNoteFromInputs();
 
-    activeId = null;
-    titleInput.value = "";
-    contentInput.value = "";
+        if (!notes.length) {
+          alert("No notes to export.");
+          return;
+        }
 
-    renderList();
-}
-
-// Clear all notes
-function clearAll() {
-    if (!confirm("Delete all notes?")) return;
-    notes = [];
-    saveNotes();
-    activeId = null;
-
-    titleInput.value = "";
-    contentInput.value = "";
-
-    renderList();
-}
-
-// ========== EXPORT FIXED ==========
-function exportNotes() {
-
-    // ensure current note content is saved
-    updateActiveNote();
-
-    let output = "";
-    notes.forEach((n, i) => {
-        output += `Note ${i + 1}\n`;
-        output += `Title: ${n.title}\n`;
-        output += `Content:\n${n.content}\n`;
-        output += "-------------------------\n\n";
-    });
-
-    const blob = new Blob([output], { type: "text/plain" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "notes.txt";
-    a.click();
-}
-
-// Import TXT
-function importTXT(file) {
-    const reader = new FileReader();
-    reader.onload = () => {
-
-        const blocks = reader.result.split(/-{5,}\s*\n/);
-
-        blocks.forEach(b => {
-            b = b.trim();
-            if (!b) return;
-
-            const titleMatch = b.match(/Title:\s*(.*)/);
-            const contentMatch = b.match(/Content:\s*([\s\S]*)/);
-
-            notes.push({
-                id: uid(),
-                title: titleMatch ? titleMatch[1].trim() : "",
-                content: contentMatch ? contentMatch[1].trim() : "",
-                updated: Date.now()
-            });
+        let text = "";
+        notes.forEach((n, i) => {
+          text += `Note ${i + 1}\n`;
+          text += `Title: ${n.title || ""}\n`;
+          text += `Content:\n${n.content || ""}\n`;
+          text += "-------------------------\n\n";
         });
 
-        saveNotes();
-        renderList();
-        alert("Import complete!");
-    };
+        const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "notes.txt";
+        // append to DOM to be safe on some browsers
+        document.body.appendChild(a);
+        a.click();
+        URL.revokeObjectURL(a.href);
+        a.remove();
+      } catch (err) {
+        console.error("Export failed:", err);
+        alert("Export failed — check console for details.");
+      }
+    }
 
-    reader.readAsText(file);
-}
+    function importTXT(file) {
+      try {
+        if (!file) {
+          alert("No file selected.");
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const text = reader.result;
+            // split by at least 5 dashes OR the separator used earlier; handle trailing whitespace
+            const blocks = text.split(/-{5,}\s*\n?/).map(b => b.trim()).filter(Boolean);
 
-// Autosave
-let timer = null;
-function autosave() {
-    clearTimeout(timer);
-    timer = setTimeout(updateActiveNote, 500);
-}
+            blocks.forEach(block => {
+              // remove leading "Note <n>" if present
+              block = block.replace(/^Note\s*\d+\s*/i, "").trim();
 
-// Event listeners
-document.getElementById("newBtn").onclick = newNote;
-document.getElementById("deleteBtn").onclick = deleteNote;
-document.getElementById("clearAll").onclick = clearAll;
-document.getElementById("exportBtn").onclick = exportNotes;
+              const titleMatch = block.match(/Title:\s*(.*)/i);
+              const contentMatch = block.match(/Content:\s*([\s\S]*)/i);
 
-document.getElementById("importBtn").onclick = () =>
-    document.getElementById("fileInput").click();
+              const title = titleMatch ? titleMatch[1].trim() : "";
+              const content = contentMatch ? contentMatch[1].trim() : "";
 
-document.getElementById("fileInput").onchange = e =>
-    importTXT(e.target.files[0]);
+              notes.push({
+                id: uid(),
+                title,
+                content,
+                updated: Date.now()
+              });
+            });
 
-titleInput.addEventListener("input", autosave);
-contentInput.addEventListener("input", autosave);
-searchInput.addEventListener("input", () =>
-    renderList(searchInput.value)
-);
+            saveNotes();
+            renderList();
+            alert("Import complete.");
+          } catch (err) {
+            console.error("Import parsing error:", err);
+            alert("Import failed — file format may be incorrect. See console.");
+          }
+        };
+        reader.onerror = (e) => {
+          console.error("FileReader error:", e);
+          alert("Failed reading file.");
+        };
+        reader.readAsText(file, 'UTF-8');
+      } catch (err) {
+        console.error("Import failed:", err);
+        alert("Import failed — check console.");
+      }
+    }
 
-// Init
-loadNotes();
-renderList();
+    // Autosave timer
+    let autosaveTimer = null;
+    function autosave() {
+      clearTimeout(autosaveTimer);
+      autosaveTimer = setTimeout(() => {
+        updateActiveNoteFromInputs();
+        renderList(searchInput.value);
+      }, 500);
+    }
+
+    // Attach events (defensive: check element existence)
+    newBtn && newBtn.addEventListener('click', createNewNote);
+    exportBtn && exportBtn.addEventListener('click', exportNotes);
+    importBtn && importBtn.addEventListener('click', () => fileInput && fileInput.click());
+    fileInput && fileInput.addEventListener('change', (e) => importTXT(e.target.files && e.target.files[0]));
+    saveBtn && saveBtn.addEventListener('click', () => { updateActiveNoteFromInputs(); renderList(searchInput.value); alert('Saved'); });
+    deleteBtn && deleteBtn.addEventListener('click', deleteCurrentNote);
+    clearAllBtn && clearAllBtn.addEventListener('click', clearAllNotes);
+
+    titleInput.addEventListener('input', autosave);
+    contentInput.addEventListener('input', autosave);
+    searchInput.addEventListener('input', () => renderList(searchInput.value));
+
+    // Init
+    loadNotes();
+    renderList();
+
+    console.info("Cloud Notes initialized.");
+  } catch (err) {
+    console.error("Initialization failed:", err);
+    alert("Initialization error — see console.");
+  }
+});
